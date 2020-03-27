@@ -1,19 +1,23 @@
 ---
-title: "OLS Regression Project"
+title: "Linear Model Project"
 author: "Your Name"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, error=FALSE)
 load("input/addhealthwweights.RData")
 library(survey)
 library(mice)
-library(stargazer)
 library(texreg)
+library(ggplot2)
 ```
 
 ```{r functions, echo=FALSE}
+
+#this function will run a linear model based on an
+#imputations object from the mice package and will
+#also adjust for sample design issues at the same time.
 lm_svy_mi <- function(formula, imputations) {
   
   #setting up null objects allows us to easily add results
@@ -65,6 +69,8 @@ lm_svy_mi <- function(formula, imputations) {
               bic.null=bic.null))
 }
 
+#This function can be used to convert the output from the 
+#lm_svy_mi function to output that texreg knows how to display
 convertModel <- function(model) {
   tr <- createTexreg(
     coef.names = rownames(model$coef), 
@@ -78,7 +84,7 @@ convertModel <- function(model) {
 }
 ```
 
-```{r imputations, echo=FALSE}
+```{r imputations, echo=FALSE, include=FALSE}
 imputations <- mice(addhealth, 5, printFlag=FALSE)
 ```
 
@@ -88,28 +94,33 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
 
-Here is an embedded code chunk for stargazer output in pdf form:
+Here is an embedded code chunk for texreg output in pdf form:
 
-```{r stargazer_example, results="asis", echo=FALSE, error=FALSE, message=FALSE}
-model1 <- lm_svy_mi(indegree~parentinc, imputations)
-model2 <- lm_svy_mi(indegree~parentinc+nsports+pseudoGPA, imputations)
-model3 <- lm_svy_mi(indegree~I(nsports/(2*sd(nsports)))+I(parentinc/(2*sd(parentinc)))+race, imputations)
+```{r texreg_example, results="asis", echo=FALSE, error=FALSE, message=FALSE}
+#These models are not the ones you want
+model1 <- lm_svy_mi(nsports~parentinc, imputations)
+model2 <- lm_svy_mi(nsports~parentinc+pseudoGPA, imputations)
+model3 <- lm_svy_mi(nsports~parentinc+pseudoGPA+race, imputations)
 
-screenreg(lapply(list(model1, model2, model3), convertModel),
+#change to screenreg for inline display
+knitreg(lapply(list(model1, model2, model3), convertModel),
        #custom.coef.names = c("Intercept",
         #                     "parental income (1000s)",
         #                     "number of sports played",
         #                     "pseudo-GPA",
         #                     "member of honor society",
         #                     "Male"),
-       caption="OLS regression models predicting number of friend nominations received",
+       digits=3,
+       caption="OLS regression models predicting number of sports played",
        caption.above = TRUE)
 ```
 
 Here is an embedded code chunk for a nice figure with captions: 
 
 ```{r figure_example, echo=FALSE, fig.cap="A Lovely Caption Goes Here"}
-boxplot(indegree~nsports, data=addhealth, las=1, 
-        col="skyblue", xlab="Number of sports played",
-        ylab="Number of friend nominations")
+ggplot(addhealth, aes(x=factor(nsports), y=indegree))+
+  geom_boxplot()+
+  labs(x="number of sports played",
+       y="number of friend nominations received")+
+  theme_bw()
 ```
